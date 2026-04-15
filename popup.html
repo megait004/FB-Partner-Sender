@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>FB Partner Sender</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 420px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0e1117;
+      color: #e6edf3;
+      font-size: 13px;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1877f2, #0d5ed9);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-icon {
+      width: 28px; height: 28px;
+      background: white;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    .header-title { font-size: 15px; font-weight: 700; color: white; }
+    .header-sub { font-size: 11px; color: rgba(255,255,255,0.75); }
+
+    .body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #7d8590;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: #8b949e;
+      margin-bottom: 4px;
+    }
+
+    input, textarea {
+      width: 100%;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #e6edf3;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, textarea:focus {
+      border-color: #1877f2;
+      box-shadow: 0 0 0 3px rgba(24,119,242,0.15);
+    }
+
+    textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .btn {
+      width: 100%;
+      padding: 9px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: #1877f2;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) { background: #1565d8; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: #21262d;
+      color: #8b949e;
+      border: 1px solid #30363d;
+      font-size: 12px;
+      padding: 7px;
+    }
+
+    .btn-secondary:hover { background: #30363d; color: #e6edf3; }
+
+    .progress-bar-wrap {
+      background: #21262d;
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: #1877f2;
+      border-radius: 4px;
+      transition: width 0.3s;
+      width: 0%;
+    }
+
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #8b949e;
+      margin-top: 4px;
+    }
+
+    .log-box {
+      background: #0d1117;
+      border: 1px solid #21262d;
+      border-radius: 6px;
+      padding: 8px 10px;
+      max-height: 130px;
+      overflow-y: auto;
+      font-size: 11px;
+      line-height: 1.7;
+      font-family: 'Consolas', monospace;
+    }
+
+    .log-box:empty::before {
+      content: 'Chờ bắt đầu...';
+      color: #3d444d;
+    }
+
+    .log-success { color: #3fb950; }
+    .log-error   { color: #f85149; }
+    .log-info    { color: #58a6ff; }
+    .log-warn    { color: #e3b341; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #21262d;
+      margin: 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat-box {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .stat-num { font-size: 18px; font-weight: 700; }
+    .stat-label { font-size: 10px; color: #8b949e; margin-top: 2px; }
+
+    .stat-total .stat-num  { color: #58a6ff; }
+    .stat-ok    .stat-num  { color: #3fb950; }
+    .stat-fail  .stat-num  { color: #f85149; }
+
+    .delay-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #8b949e;
+    }
+
+    .delay-row input {
+      width: 70px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-icon">🤝</div>
+    <div>
+      <div class="header-title">FB Partner Sender</div>
+      <div class="header-sub">Gửi yêu cầu hợp tác hàng loạt</div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- Auth -->
+    <div>
+      <div class="section-title">Thông tin xác thực</div>
+      <div class="row2">
+        <div>
+          <label>User ID (av / __user)</label>
+          <input type="text" id="userId" placeholder="100028474040742" />
+        </div>
+        <div>
+          <label>Business ID (__bid)</label>
+          <input type="text" id="businessId" placeholder="1230772795911914" />
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <label>fb_dtsg (CSRF token — lấy từ Network tab)</label>
+        <input type="text" id="fbDtsg" placeholder="NAfvmn..." />
+      </div>
+      <div style="margin-top:8px">
+        <label>lsd token</label>
+        <input type="text" id="lsdToken" placeholder="qeMFeGQHdQabBKHGDEX0hI" />
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- Target -->
+    <div>
+      <div class="section-title">Danh sách gửi</div>
+      <label>Email liên hệ (mỗi dòng một email)</label>
+      <textarea id="emailList" placeholder="email1@gmail.com&#10;email2@gmail.com&#10;email3@gmail.com"></textarea>
+      <div style="margin-top:8px">
+        <label>Pool Business ID đối tác — xoay vòng (cách nhau bằng dấu phẩy)</label>
+        <input type="text" id="partnerIds" placeholder="163119671515659, 987654321012345" />
+      </div>
+      <div style="margin-top:8px">
+        <label>Page ID muốn chia sẻ (nhiều ID cách nhau bằng dấu phẩy)</label>
+        <input type="text" id="pageIds" placeholder="556750461849806, 123456789..." />
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- Settings -->
+    <div class="delay-row">
+      <span>Delay giữa mỗi request:</span>
+      <input type="number" id="delayMs" value="2000" min="500" />
+      <span>ms</span>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-primary" id="btnSend">🚀 Bắt đầu gửi</button>
+      <button class="btn btn-secondary" id="btnClear" style="width:auto; padding:7px 14px;">Xoá log</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-box stat-total">
+        <div class="stat-num" id="statTotal">0</div>
+        <div class="stat-label">Tổng</div>
+      </div>
+      <div class="stat-box stat-ok">
+        <div class="stat-num" id="statOk">0</div>
+        <div class="stat-label">Thành công</div>
+      </div>
+      <div class="stat-box stat-fail">
+        <div class="stat-num" id="statFail">0</div>
+        <div class="stat-label">Thất bại</div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="progress-info">
+        <span id="progressText">Sẵn sàng</span>
+        <span id="progressPct">0%</span>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="log-box" id="logBox"></div>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

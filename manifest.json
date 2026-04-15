@@ -1,0 +1,27 @@
+{
+    "manifest_version": 3,
+    "name": "FB Partner Sender",
+    "version": "1.0",
+    "description": "Gửi yêu cầu chia sẻ tài sản hàng loạt trên Facebook Business Manager",
+    "permissions": [
+        "scripting",
+        "tabs"
+    ],
+    "host_permissions": [
+        "https://business.facebook.com/*"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "FB Partner Sender"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://business.facebook.com/*"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ]
+}
