@@ -1,7 +1,4 @@
-const $ = (id) => document.getElementById(id);
-
-let running = false;
-let stats = { total: 0, ok: 0, fail: 0 };
+const $ = id => document.getElementById(id);
 
 const SAVE_FIELDS = ['userId', 'businessId', 'fbDtsg', 'lsdToken', 'pageIds', 'partnerIds', 'delayMs', 'emailList'];
 
@@ -10,154 +7,181 @@ const DEFAULTS = {
   pageIds: '556750461849806',
 };
 
-const saveForm = () => {
-  SAVE_FIELDS.forEach((id) => {
-    localStorage.setItem(id, $(id).value);
-  });
-};
+const saveForm = () => SAVE_FIELDS.forEach(id => localStorage.setItem(id, $(id).value));
 
 const loadForm = () => {
-  SAVE_FIELDS.forEach((id) => {
+  SAVE_FIELDS.forEach(id => {
     const val = localStorage.getItem(id);
-    if (val !== null) $(id).value = val;
-    else if (DEFAULTS[id]) $(id).value = DEFAULTS[id];
+    $(id).value = val !== null ? val : (DEFAULTS[id] || '');
   });
 };
 
 document.addEventListener('DOMContentLoaded', () => {
   loadForm();
-  SAVE_FIELDS.forEach((id) => {
-    $(id).addEventListener('input', saveForm);
-  });
+  SAVE_FIELDS.forEach(id => $(id).addEventListener('input', saveForm));
 });
 
 const log = (msg, type = 'info') => {
   const box = $('logBox');
   const line = document.createElement('div');
   line.className = `log-${type}`;
-  const now = new Date().toLocaleTimeString('vi-VN');
-  line.textContent = `[${now}] ${msg}`;
+  line.textContent = `[${new Date().toLocaleTimeString('vi-VN')}] ${msg}`;
   box.appendChild(line);
   box.scrollTop = box.scrollHeight;
 };
 
-const updateStats = () => {
-  $('statTotal').textContent = stats.total;
-  $('statOk').textContent    = stats.ok;
-  $('statFail').textContent  = stats.fail;
-};
-
-const updateProgress = (current, total) => {
-  const pct = total === 0 ? 0 : Math.round((current / total) * 100);
-  $('progressBar').style.width = pct + '%';
-  $('progressPct').textContent = pct + '%';
-  $('progressText').textContent = `${current} / ${total} email`;
-};
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 const getFacebookTabId = () =>
   new Promise((resolve, reject) => {
-    chrome.tabs.query({ url: 'https://business.facebook.com/*' }, (tabs) => {
-      if (tabs.length === 0) reject(new Error('Chưa mở tab business.facebook.com. Vui lòng mở trang trước.'));
+    chrome.tabs.query({ url: 'https://business.facebook.com/*' }, tabs => {
+      if (!tabs.length) reject(new Error('Chưa mở tab business.facebook.com. Vui lòng mở trang trước.'));
       else resolve(tabs[0].id);
     });
   });
 
-const injectContentScript = (tabId) =>
+const injectContentScript = tabId =>
   chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
 
-const sendMessage = (tabId, payload) =>
-  new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, { type: 'SEND_PARTNER_REQUEST', payload }, (resp) => {
-      if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
-      if (!resp) return reject(new Error('Không nhận được phản hồi từ content script.'));
-      if (!resp.ok) return reject(new Error(resp.error));
-      resolve(resp);
-    });
-  });
+const launchSending = async () => {
+  saveForm();
 
-const sendPartnerRequest = async ({ email, partnerId, pageIds, userId, businessId, fbDtsg, lsdToken, mutationIndex }) => {
-  const tabId = await getFacebookTabId();
+  const emailRaw   = $('emailList').value.trim();
+  const userId     = $('userId').value.trim();
+  const businessId = $('businessId').value.trim();
+  const fbDtsg     = decodeURIComponent($('fbDtsg').value.trim());
+  const lsdToken   = decodeURIComponent($('lsdToken').value.trim());
+  const pageIds    = $('pageIds').value.split(',').map(p => p.trim()).filter(Boolean);
+  const partnerIds = $('partnerIds').value.split(',').map(p => p.trim()).filter(Boolean);
+  const delayMs    = parseInt($('delayMs').value) || 2000;
 
+  if (!emailRaw)          return log('⚠ Vui lòng nhập danh sách email.', 'warn');
+  if (!userId)            return log('⚠ Vui lòng nhập User ID.', 'warn');
+  if (!businessId)        return log('⚠ Vui lòng nhập Business ID.', 'warn');
+  if (!fbDtsg)            return log('⚠ Vui lòng nhập fb_dtsg token.', 'warn');
+  if (!lsdToken)          return log('⚠ Vui lòng nhập lsd token.', 'warn');
+  if (!pageIds.length)    return log('⚠ Vui lòng nhập ít nhất 1 Page ID.', 'warn');
+  if (!partnerIds.length) return log('⚠ Vui lòng nhập ít nhất 1 Partner Business ID.', 'warn');
+
+  const emails = emailRaw.split('\n').map(e => e.trim()).filter(Boolean);
+  if (!emails.length) return log('⚠ Danh sách email trống.', 'warn');
+
+  let tabId;
   try {
-    return await sendMessage(tabId, { email, partnerId, pageIds, userId, businessId, fbDtsg, lsdToken, mutationIndex });
+    tabId = await getFacebookTabId();
   } catch (err) {
-    if (err.message.includes('Receiving end does not exist') || err.message.includes('Could not establish')) {
-      await injectContentScript(tabId);
-      await sleep(300);
-      return await sendMessage(tabId, { email, partnerId, pageIds, userId, businessId, fbDtsg, lsdToken, mutationIndex });
-    }
-    throw err;
+    return log('✗ ' + err.message, 'error');
   }
-};
 
-const startSending = async () => {
-  const emailRaw    = $('emailList').value.trim();
-  const userId      = $('userId').value.trim();
-  const businessId  = $('businessId').value.trim();
-  const fbDtsg      = decodeURIComponent($('fbDtsg').value.trim());
-  const lsdToken    = decodeURIComponent($('lsdToken').value.trim());
-  const pageIds     = $('pageIds').value.split(',').map((p) => p.trim()).filter(Boolean);
-  const partnerIds  = $('partnerIds').value.split(',').map((p) => p.trim()).filter(Boolean);
-  const delayMs     = parseInt($('delayMs').value) || 2000;
+  const payload = { emails, userId, businessId, fbDtsg, lsdToken, pageIds, partnerIds, delayMs };
 
-  if (!emailRaw)              return log('⚠ Vui lòng nhập danh sách email.', 'warn');
-  if (!userId)                return log('⚠ Vui lòng nhập User ID.', 'warn');
-  if (!businessId)            return log('⚠ Vui lòng nhập Business ID.', 'warn');
-  if (!fbDtsg)                return log('⚠ Vui lòng nhập fb_dtsg token.', 'warn');
-  if (!lsdToken)              return log('⚠ Vui lòng nhập lsd token.', 'warn');
-  if (pageIds.length === 0)   return log('⚠ Vui lòng nhập ít nhất 1 Page ID.', 'warn');
-  if (partnerIds.length === 0) return log('⚠ Vui lòng nhập ít nhất 1 Partner Business ID.', 'warn');
+  const doLaunch = () =>
+    new Promise((resolve, reject) => {
+      chrome.tabs.sendMessage(tabId, { type: 'START_SENDING', payload }, resp => {
+        if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+        if (!resp?.ok) return reject(new Error(resp?.error || 'Lỗi không xác định'));
+        resolve(resp);
+      });
+    });
 
-  const emails = emailRaw.split('\n').map((e) => e.trim()).filter(Boolean);
-  if (emails.length === 0) return log('⚠ Danh sách email trống.', 'warn');
-
-  running = true;
-  stats = { total: emails.length, ok: 0, fail: 0 };
-  updateStats();
-  updateProgress(0, emails.length);
+  const tryLaunch = async () => {
+    try {
+      await doLaunch();
+    } catch (err) {
+      if (err.message.includes('Receiving end does not exist') || err.message.includes('Could not establish')) {
+        await injectContentScript(tabId);
+        await new Promise(r => setTimeout(r, 400));
+        await doLaunch();
+      } else {
+        throw err;
+      }
+    }
+  };
 
   $('btnSend').disabled = true;
-  $('btnSend').textContent = '⏳ Đang gửi...';
+  $('btnSend').textContent = '⏳ Đang khởi động...';
 
-  log(`Bắt đầu gửi ${emails.length} email (${partnerIds.length} business ID xoay vòng)...`, 'info');
-
-  for (let i = 0; i < emails.length; i++) {
-    const email     = emails[i];
-    const partnerId = partnerIds[i % partnerIds.length];
-    log(`→ [${i + 1}/${emails.length}] ${email} → BM: ${partnerId}`, 'info');
-
-    try {
-      const result = await sendPartnerRequest({ email, partnerId, pageIds, userId, businessId, fbDtsg, lsdToken, mutationIndex: i + 1 });
-      stats.ok++;
-      log(`✓ Thành công: ${email}${result.canceled ? ' (đã hủy request)' : ''}`, 'success');
-    } catch (err) {
-      stats.fail++;
-      log(`✗ Thất bại: ${email} — ${err.message}`, 'error');
-    }
-
-    updateStats();
-    updateProgress(i + 1, emails.length);
-
-    if (i < emails.length - 1) await sleep(delayMs);
+  try {
+    await tryLaunch();
+    log(`✓ Đã mở panel gửi trên trang (${emails.length} email). Có thể đóng popup này.`, 'success');
+    $('btnSend').textContent = '✓ Đang gửi trên trang';
+    setTimeout(() => {
+      $('btnSend').disabled = false;
+      $('btnSend').textContent = '🚀 Bắt đầu gửi';
+    }, 3000);
+  } catch (err) {
+    log('✗ ' + err.message, 'error');
+    $('btnSend').disabled = false;
+    $('btnSend').textContent = '🚀 Bắt đầu gửi';
   }
-
-  running = false;
-  $('btnSend').disabled = false;
-  $('btnSend').textContent = '🚀 Bắt đầu gửi';
-
-  log(`Hoàn tất! ✓ ${stats.ok} thành công, ✗ ${stats.fail} thất bại.`, stats.fail === 0 ? 'success' : 'warn');
 };
 
-$('btnSend').addEventListener('click', () => {
-  if (!running) startSending();
-});
+const autoFetchTokens = async () => {
+  const btn = $('btnAutoToken');
+  btn.disabled = true;
+  btn.textContent = '⏳ Đang lấy...';
+
+  let tabId;
+  try {
+    tabId = await getFacebookTabId();
+  } catch (err) {
+    log('✗ ' + err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '⚡ Tự động lấy token';
+    return;
+  }
+
+  const doGetTokens = () =>
+    new Promise((resolve, reject) => {
+      chrome.tabs.sendMessage(tabId, { type: 'GET_TOKENS' }, resp => {
+        if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+        resolve(resp);
+      });
+    });
+
+  try {
+    let resp;
+    try {
+      resp = await doGetTokens();
+    } catch (err) {
+      if (err.message.includes('Receiving end does not exist') || err.message.includes('Could not establish')) {
+        await injectContentScript(tabId);
+        await new Promise(r => setTimeout(r, 400));
+        resp = await doGetTokens();
+      } else {
+        throw err;
+      }
+    }
+
+    if (!resp?.ok) throw new Error(resp?.error || 'Không lấy được token');
+
+    const filled = [];
+    if (resp.fbDtsg)   { $('fbDtsg').value   = resp.fbDtsg;   filled.push('fb_dtsg'); }
+    if (resp.lsdToken) { $('lsdToken').value  = resp.lsdToken; filled.push('lsd'); }
+    if (resp.userId)   { $('userId').value    = resp.userId;   filled.push('userId'); }
+
+    saveForm();
+
+    if (filled.length) {
+      log(`✓ Đã tự động điền: ${filled.join(', ')}`, 'success');
+      btn.textContent = '✓ Đã lấy xong';
+    } else {
+      log('⚠ Không tìm thấy token — hãy mở tab business.facebook.com trước và tải lại trang.', 'warn');
+      btn.textContent = '⚡ Tự động lấy token';
+    }
+  } catch (err) {
+    log('✗ ' + err.message, 'error');
+    btn.textContent = '⚡ Tự động lấy token';
+  }
+
+  btn.disabled = false;
+  setTimeout(() => {
+    if (btn.textContent === '✓ Đã lấy xong') btn.textContent = '⚡ Tự động lấy token';
+  }, 3000);
+};
+
+$('btnAutoToken').addEventListener('click', autoFetchTokens);
+
+$('btnSend').addEventListener('click', launchSending);
 
 $('btnClear').addEventListener('click', () => {
   $('logBox').innerHTML = '';
-  stats = { total: 0, ok: 0, fail: 0 };
-  updateStats();
-  updateProgress(0, 0);
-  $('progressText').textContent = 'Sẵn sàng';
 });

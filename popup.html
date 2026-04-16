@@ -102,29 +102,6 @@
 
     .btn-secondary:hover { background: #30363d; color: #e6edf3; }
 
-    .progress-bar-wrap {
-      background: #21262d;
-      border-radius: 4px;
-      height: 6px;
-      overflow: hidden;
-    }
-
-    .progress-bar {
-      height: 100%;
-      background: #1877f2;
-      border-radius: 4px;
-      transition: width 0.3s;
-      width: 0%;
-    }
-
-    .progress-info {
-      display: flex;
-      justify-content: space-between;
-      font-size: 11px;
-      color: #8b949e;
-      margin-top: 4px;
-    }
-
     .log-box {
       background: #0d1117;
       border: 1px solid #21262d;
@@ -153,27 +130,6 @@
       margin: 0;
     }
 
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-
-    .stat-box {
-      background: #161b22;
-      border: 1px solid #21262d;
-      border-radius: 6px;
-      padding: 8px;
-      text-align: center;
-    }
-
-    .stat-num { font-size: 18px; font-weight: 700; }
-    .stat-label { font-size: 10px; color: #8b949e; margin-top: 2px; }
-
-    .stat-total .stat-num  { color: #58a6ff; }
-    .stat-ok    .stat-num  { color: #3fb950; }
-    .stat-fail  .stat-num  { color: #f85149; }
-
     .delay-row {
       display: flex;
       align-items: center;
@@ -201,7 +157,10 @@
 
     <!-- Auth -->
     <div>
-      <div class="section-title">Thông tin xác thực</div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+        <div class="section-title" style="margin-bottom:0">Thông tin xác thực</div>
+        <button class="btn btn-secondary" id="btnAutoToken" style="width:auto; padding:5px 10px; font-size:11px;">⚡ Tự động lấy token</button>
+      </div>
       <div class="row2">
         <div>
           <label>User ID (av / __user)</label>
@@ -213,7 +172,7 @@
         </div>
       </div>
       <div style="margin-top:8px">
-        <label>fb_dtsg (CSRF token — lấy từ Network tab)</label>
+        <label>fb_dtsg (CSRF token)</label>
         <input type="text" id="fbDtsg" placeholder="NAfvmn..." />
       </div>
       <div style="margin-top:8px">
@@ -254,35 +213,12 @@
       <button class="btn btn-secondary" id="btnClear" style="width:auto; padding:7px 14px;">Xoá log</button>
     </div>
 
-    <!-- Stats -->
-    <div class="stats">
-      <div class="stat-box stat-total">
-        <div class="stat-num" id="statTotal">0</div>
-        <div class="stat-label">Tổng</div>
-      </div>
-      <div class="stat-box stat-ok">
-        <div class="stat-num" id="statOk">0</div>
-        <div class="stat-label">Thành công</div>
-      </div>
-      <div class="stat-box stat-fail">
-        <div class="stat-num" id="statFail">0</div>
-        <div class="stat-label">Thất bại</div>
-      </div>
-    </div>
-
-    <!-- Progress -->
-    <div>
-      <div class="progress-bar-wrap">
-        <div class="progress-bar" id="progressBar"></div>
-      </div>
-      <div class="progress-info">
-        <span id="progressText">Sẵn sàng</span>
-        <span id="progressPct">0%</span>
-      </div>
-    </div>
-
-    <!-- Log -->
+    <!-- Launch status log -->
     <div class="log-box" id="logBox"></div>
+
+    <div style="font-size:11px; color:#484f58; text-align:center; padding-bottom:2px;">
+      Panel tiến trình sẽ hiện giữa trang — ghim lại, không tắt khi bấm ra ngoài
+    </div>
 
   </div>
 
